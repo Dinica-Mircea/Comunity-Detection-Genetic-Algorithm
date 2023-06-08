@@ -9,8 +9,22 @@ import warnings
 warnings.simplefilter("ignore", category=RuntimeWarning, append=True)
 
 
-# functia de fitness
-def fitness_function(chromosome, network):
+#fitness function with maximizing distance from centroid
+def fitness_function_distance_on_from_centroid(chromosome, network):
+    centroid = np.mean(network["degrees"], axis=0)
+    distance = np.linalg.norm(chromosome - centroid)
+    return 1 / distance
+
+#fitness function that calculates the coverage of a chromosome in a network
+def fitness_functicoverage(chromosome, network):
+    covered = 0
+    for node in range(1,network["noNodes"]):
+        if node in network and set(chromosome).issuperset(node):
+            covered += 1
+    return covered / network["noNodes"]
+
+# fitness function with modularity
+def fitness_function_modularity(chromosome, network):
     # calculate modularity for given chromosome
     m = network["noEdges"]
     Q = 0
@@ -61,8 +75,9 @@ def genetic_algorithm(network, population_size, num_generations, mutation_prob, 
     population = np.random.randint(0, num_communities, size=(population_size, network["noNodes"]))
     index = 1
     for generation in range(num_generations):
+        #print("Generation: ",generation)
         # evaluate fitness for every chromosome
-        fitness_values = np.array([fitness_function(chromosome, network) for chromosome in population])
+        fitness_values = np.array([fitness_functicoverage(chromosome, network) for chromosome in population])
         shifted_fitness_values = fitness_values - np.min(fitness_values)
         fitness_values_normalized = shifted_fitness_values / np.sum(shifted_fitness_values)
         if (np.isclose(sum(fitness_values_normalized), 1)):
@@ -77,13 +92,13 @@ def genetic_algorithm(network, population_size, num_generations, mutation_prob, 
             population = np.array(new_population)
             index = index + 1
         else:
-            fitness_values = np.array([fitness_function(chromosome, network) for chromosome in population])
+            fitness_values = np.array([fitness_functicoverage(chromosome, network) for chromosome in population])
             best_chromosome = population[np.argmax(fitness_values)]
             print("\nbest chromosome: ", best_chromosome)
             return best_chromosome
 
     # find the best chromosome and return it
-    fitness_values = np.array([fitness_function(chromosome, network) for chromosome in population])
+    fitness_values = np.array([fitness_functicoverage(chromosome, network) for chromosome in population])
     best_chromosome = population[np.argmax(fitness_values)]
     print("best chromosome: ", best_chromosome)
     return best_chromosome
@@ -177,9 +192,9 @@ def getMatchingPercentageOfTwoFiles(fileName1, fileName2):
 
 
 def main():
-    # print("result for net.in:")
-    # print(readNet("net.in"))
-    # print(genetic_algorithm(readNet("net.in"),10,6,0.01,3,2))
+    print("result for net.in:")
+    print(readNet("net.in"))
+    print(genetic_algorithm(readNet("net.in"),10,6,0.01,3,2))
 
     print("result for dolphins.gml:")
     writeChromosomeInFile(
@@ -240,5 +255,10 @@ def main():
         "results/data6.out"
     )
 
+    print("\n result for lesmis.gml: ")
+    writeChromosomeInFile(genetic_algorithm(readGML("real/lesmis.gml"),100,100,0.01,random.randint(1,70),3),"results/lesmis.out")
+
+    print("\n result for netsciene.gml: ")
+    writeChromosomeInFile(genetic_algorithm(readGML("real/netscience.gml"),5,5,0.01,random.randint(1,1500),4),"results/netscience.out")
 
 main()
